@@ -387,7 +387,7 @@ static int packet_get_ipv6_info(uint16_t vlan_id, ndpi_packet_tunnel tunnel_id,
     return 0;
   }
   iph.protocol = l4proto;
-  iph.tot_len = iph6->ip6_hdr.ip6_un1_plen;
+  iph.tot_len = htons(sizeof(struct ndpi_ipv6hdr) + ntohs(iph6->ip6_hdr.ip6_un1_plen));
   return(packet_get_ip_info(6, vlan_id, tunnel_id, &iph, iph6, ipsize, ip_len, l4ptr - (const uint8_t *)iph6,
 	     tcph, udph, sport, dport, proto, payload, payload_len, nf_pkt, n_roots, root_idx, mode));
 }
