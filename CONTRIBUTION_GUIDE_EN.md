@@ -7,11 +7,13 @@ This is a guide for contributing the **HTTP2Fingerprint** and **HTTP3Fingerprint
 ## What Has Been Added
 
 ### 1. New Plugin: `http2.py`
+
 **Path:** `nfstream/plugins/http2.py`
 
 This plugin includes 2 classes:
 
 #### HTTP2Fingerprint
+
 - Detects and analyzes HTTP/2 traffic
 - Extracts SETTINGS frame parameters
 - Creates unique fingerprint for each client
@@ -19,6 +21,7 @@ This plugin includes 2 classes:
 - Supports client preface identification
 
 **Added flow attributes:**
+
 - `http2_detected`: Boolean - Whether HTTP/2 was detected
 - `http2_client_preface`: Boolean - Whether client preface exists
 - `http2_settings_fingerprint`: String - MD5 hash of SETTINGS parameters
@@ -29,12 +32,14 @@ This plugin includes 2 classes:
 - `http2_settings_params`: Dict - Raw SETTINGS parameters
 
 #### HTTP3Fingerprint
+
 - Detects and analyzes HTTP/3 (QUIC) traffic
 - Identifies QUIC version
 - Analyzes long/short headers
 - Creates fingerprint based on QUIC parameters
 
 **Added flow attributes:**
+
 - `http3_detected`: Boolean - Whether HTTP/3 was detected
 - `quic_version`: String - QUIC version identifier
 - `quic_fingerprint`: String - MD5 hash of QUIC parameters
@@ -42,18 +47,22 @@ This plugin includes 2 classes:
 - `http3_frame_types`: List - List of HTTP/3 frame types
 
 ### 2. Test Script: `test_http2_http3.py`
+
 **Path:** `test_http2_http3.py`
 
 Test script for the plugin with available PCAP files:
+
 - Tests HTTP/2 detection
-- Tests HTTP/3 detection  
+- Tests HTTP/3 detection
 - Tests combined analysis
 - Displays details about fingerprints and settings
 
 ### 3. Examples: `examples/http2_http3_example.py`
+
 **Path:** `examples/http2_http3_example.py`
 
 7 plugin usage examples:
+
 1. Basic HTTP/2 Detection
 2. HTTP/2 SETTINGS Analysis
 3. HTTP/3 Detection
@@ -63,9 +72,11 @@ Test script for the plugin with available PCAP files:
 7. Client Identification
 
 ### 4. Documentation: `HTTP2_HTTP3_PLUGIN_README.md`
+
 **Path:** `HTTP2_HTTP3_PLUGIN_README.md`
 
 Complete documentation about:
+
 - How to use the plugin
 - Flow attributes
 - Practical examples
@@ -74,7 +85,9 @@ Complete documentation about:
 - References
 
 ### 5. Update: `nfstream/plugins/__init__.py`
+
 Added export for 2 new classes:
+
 ```python
 from .http2 import HTTP2Fingerprint, HTTP3Fingerprint
 ```
@@ -114,7 +127,7 @@ for flow in streamer:
     if flow.udps.http2_detected:
         print(f"HTTP/2: {flow.src_ip} -> {flow.dst_ip}")
         print(f"Fingerprint: {flow.udps.http2_settings_fingerprint}")
-    
+
     if flow.udps.http3_detected:
         print(f"HTTP/3: {flow.src_ip} -> {flow.dst_ip}")
         print(f"QUIC Version: {flow.udps.quic_version}")
@@ -130,6 +143,7 @@ python test_http2_http3.py
 ```
 
 The script will automatically find and analyze PCAP files in the `tests/pcaps/` directory:
+
 - `chrome.pcap`
 - `443-chrome.pcap`
 - `443-firefox.pcap`
@@ -147,21 +161,25 @@ python http2_http3_example.py
 ## Plugin Benefits
 
 ### 1. Security Monitoring
+
 - Detect anomalous clients based on fingerprints
 - Track applications using HTTP/2 and HTTP/3
 - Detect protocol anomalies
 
 ### 2. Traffic Analysis
+
 - Understand HTTP/2 and HTTP/3 adoption rate
 - Analyze performance characteristics
 - Compare behavior between different browsers/applications
 
 ### 3. Client Identification
+
 - Distinguish Chrome, Firefox, Safari, curl, etc.
 - Detect automated tools and bots
 - Track client versions
 
 ### 4. Research and Development
+
 - Provide datasets for ML models
 - Analyze protocol evolution
 - Benchmark different implementations
@@ -169,6 +187,7 @@ python http2_http3_example.py
 ## Real-World Use Cases
 
 ### 1. Network Security Team
+
 ```python
 # Detect unusual HTTP/2 clients
 baseline_fingerprints = load_baseline()
@@ -181,6 +200,7 @@ for flow in streamer:
 ```
 
 ### 2. Network Operations
+
 ```python
 # Monitor HTTP version adoption
 stats = analyze_http_versions(pcap_files)
@@ -188,6 +208,7 @@ generate_report(stats)  # Show migration to HTTP/2 and HTTP/3
 ```
 
 ### 3. Application Development
+
 ```python
 # Verify your application's HTTP/2 configuration
 my_app_flows = filter_by_ip(flows, my_server_ip)
@@ -230,6 +251,7 @@ git checkout -b feature/http2-http3-fingerprinting
 ### Step 3: Copy files
 
 Copy the following files to your fork:
+
 - `nfstream/plugins/http2.py`
 - `test_http2_http3.py`
 - `examples/http2_http3_example.py`
@@ -276,11 +298,14 @@ git push origin feature/http2-http3-fingerprinting
 ## HTTP/2 and HTTP/3 Fingerprinting Plugins
 
 ### Summary
+
 This PR adds two new plugins for analyzing modern web traffic:
+
 - `HTTP2Fingerprint`: Analyzes HTTP/2 frames and extracts client fingerprints
 - `HTTP3Fingerprint`: Detects and fingerprints HTTP/3 (QUIC) traffic
 
 ### Features
+
 - HTTP/2 SETTINGS frame analysis
 - Client fingerprint generation based on protocol parameters
 - HTTP/3 (QUIC) version detection
@@ -288,23 +313,27 @@ This PR adds two new plugins for analyzing modern web traffic:
 - Support for both offline and live analysis
 
 ### Testing
+
 - Tested with multiple PCAP files (Chrome, Firefox, curl)
 - Example scripts provided
 - Comprehensive documentation included
 
 ### Use Cases
+
 - Client identification and tracking
 - Security monitoring
 - Protocol adoption analysis
 - Network traffic characterization
 
 ### Files Added
+
 - `nfstream/plugins/http2.py`: Main plugin implementation
 - `test_http2_http3.py`: Test suite
 - `examples/http2_http3_example.py`: Usage examples
 - `HTTP2_HTTP3_PLUGIN_README.md`: Documentation
 
 ### Files Modified
+
 - `nfstream/plugins/__init__.py`: Export new plugins
 ```
 
@@ -328,11 +357,11 @@ class MyPlugin(NFPlugin):
     def on_init(self, packet, flow):
         # Initialize flow attributes
         flow.udps.my_attribute = initial_value
-    
+
     def on_update(self, packet, flow):
         # Update with each packet
         flow.udps.my_attribute += 1
-    
+
     def on_expire(self, flow):
         # Finalize when flow ends
         flow.udps.final_value = compute_final()
@@ -361,16 +390,19 @@ if hasattr(ip_packet, 'tcp'):
 Some ideas for future versions:
 
 1. **Extended HTTP/2 Features**
+
    - Parse HEADERS frame to extract HTTP headers
    - Analyze PRIORITY tree structure
    - Track PUSH_PROMISE frames
 
 2. **HTTP/3 Enhancements**
+
    - Parse HTTP/3 frames (HEADERS, DATA, SETTINGS)
    - Extract QPACK compression details
    - Analyze 0-RTT usage
 
 3. **Machine Learning Integration**
+
    - Train models to classify clients based on fingerprints
    - Anomaly detection for unusual protocol usage
    - Traffic prediction
@@ -391,5 +423,6 @@ Some ideas for future versions:
 ## Contact
 
 If you have questions or need support:
+
 - GitHub Issues: https://github.com/nfstream/nfstream/issues
 - Gitter Chat: https://gitter.im/nfstream/community

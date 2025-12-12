@@ -25,16 +25,16 @@ The `HTTP2Fingerprint` plugin analyzes HTTP/2 traffic and extracts:
 
 When using the HTTP2Fingerprint plugin, the following attributes are added to each flow:
 
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `http2_detected` | bool | Whether HTTP/2 was detected |
-| `http2_client_preface` | bool | Whether client preface was found |
-| `http2_settings_fingerprint` | str | MD5 hash of SETTINGS parameters |
-| `http2_priority_fingerprint` | str | MD5 hash of PRIORITY data |
-| `http2_window_update` | int | Initial WINDOW_UPDATE value |
-| `http2_settings_count` | int | Number of SETTINGS parameters |
-| `http2_frame_types` | list | List of frame types observed |
-| `http2_settings_params` | dict | Raw SETTINGS parameters |
+| Attribute                    | Type | Description                      |
+| ---------------------------- | ---- | -------------------------------- |
+| `http2_detected`             | bool | Whether HTTP/2 was detected      |
+| `http2_client_preface`       | bool | Whether client preface was found |
+| `http2_settings_fingerprint` | str  | MD5 hash of SETTINGS parameters  |
+| `http2_priority_fingerprint` | str  | MD5 hash of PRIORITY data        |
+| `http2_window_update`        | int  | Initial WINDOW_UPDATE value      |
+| `http2_settings_count`       | int  | Number of SETTINGS parameters    |
+| `http2_frame_types`          | list | List of frame types observed     |
+| `http2_settings_params`      | dict | Raw SETTINGS parameters          |
 
 ### HTTP3Fingerprint Plugin
 
@@ -47,13 +47,13 @@ The `HTTP3Fingerprint` plugin analyzes HTTP/3 (QUIC) traffic and extracts:
 
 #### Flow Attributes
 
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `http3_detected` | bool | Whether HTTP/3 was detected |
-| `quic_version` | str | QUIC version identifier |
-| `quic_fingerprint` | str | MD5 hash of QUIC parameters |
-| `quic_long_header` | bool | Whether long header was used |
-| `http3_frame_types` | list | List of HTTP/3 frame types |
+| Attribute           | Type | Description                  |
+| ------------------- | ---- | ---------------------------- |
+| `http3_detected`    | bool | Whether HTTP/3 was detected  |
+| `quic_version`      | str  | QUIC version identifier      |
+| `quic_fingerprint`  | str  | MD5 hash of QUIC parameters  |
+| `quic_long_header`  | bool | Whether long header was used |
+| `http3_frame_types` | list | List of HTTP/3 frame types   |
 
 ## Installation
 
@@ -155,7 +155,7 @@ df = streamer.to_pandas()
 
 # Filter for HTTP/2 and HTTP/3 flows
 modern_http = df[
-    (df['udps.http2_detected'] == True) | 
+    (df['udps.http2_detected'] == True) |
     (df['udps.http3_detected'] == True)
 ]
 
@@ -177,14 +177,14 @@ streamer = NFStreamer(
 for flow in streamer:
     if flow.udps.http2_detected and flow.udps.http2_settings_fingerprint:
         fp = flow.udps.http2_settings_fingerprint
-        
+
         if fp not in fingerprints:
             fingerprints[fp] = {
                 'count': 0,
                 'settings': flow.udps.http2_settings_params,
                 'ips': set()
             }
-        
+
         fingerprints[fp]['count'] += 1
         fingerprints[fp]['ips'].add(flow.src_ip)
 
@@ -202,28 +202,31 @@ HTTP/2 clients send a SETTINGS frame during connection establishment with variou
 
 ### Common SETTINGS Parameters
 
-| Parameter | ID | Description | Typical Values |
-|-----------|-----|-------------|----------------|
-| HEADER_TABLE_SIZE | 0x01 | HPACK table size | 4096 (Firefox), 65536 (Chrome) |
-| ENABLE_PUSH | 0x02 | Server push enabled | 0 or 1 |
-| MAX_CONCURRENT_STREAMS | 0x03 | Max parallel streams | 100-1000 |
-| INITIAL_WINDOW_SIZE | 0x04 | Initial flow control window | 65535 or 6291456 |
-| MAX_FRAME_SIZE | 0x05 | Maximum frame size | 16384-16777215 |
-| MAX_HEADER_LIST_SIZE | 0x06 | Maximum header size | Often unset |
+| Parameter              | ID   | Description                 | Typical Values                 |
+| ---------------------- | ---- | --------------------------- | ------------------------------ |
+| HEADER_TABLE_SIZE      | 0x01 | HPACK table size            | 4096 (Firefox), 65536 (Chrome) |
+| ENABLE_PUSH            | 0x02 | Server push enabled         | 0 or 1                         |
+| MAX_CONCURRENT_STREAMS | 0x03 | Max parallel streams        | 100-1000                       |
+| INITIAL_WINDOW_SIZE    | 0x04 | Initial flow control window | 65535 or 6291456               |
+| MAX_FRAME_SIZE         | 0x05 | Maximum frame size          | 16384-16777215                 |
+| MAX_HEADER_LIST_SIZE   | 0x06 | Maximum header size         | Often unset                    |
 
 ### Example Client Fingerprints
 
 **Chrome:**
+
 - Typically sends 6 SETTINGS parameters
 - INITIAL_WINDOW_SIZE: 6291456
 - ENABLE_PUSH: 0
 
 **Firefox:**
-- Typically sends 5 SETTINGS parameters  
+
+- Typically sends 5 SETTINGS parameters
 - INITIAL_WINDOW_SIZE: 65535
 - Different HEADER_TABLE_SIZE
 
 **curl:**
+
 - Minimal SETTINGS frame
 - Different parameter ordering
 

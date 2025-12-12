@@ -21,14 +21,14 @@ from dpkt.ip import IP, IP_PROTO_TCP
 class HTTP2Fingerprint(NFPlugin):
     """
     HTTP2Fingerprint Plugin: Extract HTTP/2 fingerprinting information
-    
+
     This plugin analyzes HTTP/2 frames and extracts fingerprinting features that can be used
     to identify clients and their characteristics. It captures:
     - SETTINGS frame parameters
     - WINDOW_UPDATE initial values
     - PRIORITY frame information
     - Header compression patterns (HPACK)
-    
+
     Attributes:
         flow.udps.http2_detected: Boolean indicating if HTTP/2 was detected
         flow.udps.http2_client_preface: Boolean indicating if client preface was found
@@ -39,32 +39,32 @@ class HTTP2Fingerprint(NFPlugin):
         flow.udps.http2_frame_types: List of frame types seen
         flow.udps.http2_pseudo_headers: Extracted pseudo headers from HEADERS frame
     """
-    
+
     # HTTP/2 Connection Preface
-    HTTP2_PREFACE = b'PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n'
-    
+    HTTP2_PREFACE = b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
+
     # HTTP/2 Frame Types
     FRAME_TYPES = {
-        0x00: 'DATA',
-        0x01: 'HEADERS',
-        0x02: 'PRIORITY',
-        0x03: 'RST_STREAM',
-        0x04: 'SETTINGS',
-        0x05: 'PUSH_PROMISE',
-        0x06: 'PING',
-        0x07: 'GOAWAY',
-        0x08: 'WINDOW_UPDATE',
-        0x09: 'CONTINUATION'
+        0x00: "DATA",
+        0x01: "HEADERS",
+        0x02: "PRIORITY",
+        0x03: "RST_STREAM",
+        0x04: "SETTINGS",
+        0x05: "PUSH_PROMISE",
+        0x06: "PING",
+        0x07: "GOAWAY",
+        0x08: "WINDOW_UPDATE",
+        0x09: "CONTINUATION",
     }
-    
+
     # HTTP/2 SETTINGS Parameters
     SETTINGS_PARAMS = {
-        0x01: 'SETTINGS_HEADER_TABLE_SIZE',
-        0x02: 'SETTINGS_ENABLE_PUSH',
-        0x03: 'SETTINGS_MAX_CONCURRENT_STREAMS',
-        0x04: 'SETTINGS_INITIAL_WINDOW_SIZE',
-        0x05: 'SETTINGS_MAX_FRAME_SIZE',
-        0x06: 'SETTINGS_MAX_HEADER_LIST_SIZE'
+        0x01: "SETTINGS_HEADER_TABLE_SIZE",
+        0x02: "SETTINGS_ENABLE_PUSH",
+        0x03: "SETTINGS_MAX_CONCURRENT_STREAMS",
+        0x04: "SETTINGS_INITIAL_WINDOW_SIZE",
+        0x05: "SETTINGS_MAX_FRAME_SIZE",
+        0x06: "SETTINGS_MAX_HEADER_LIST_SIZE",
     }
 
     def on_init(self, packet, flow):
@@ -78,7 +78,7 @@ class HTTP2Fingerprint(NFPlugin):
         flow.udps.http2_frame_types = []
         flow.udps.http2_pseudo_headers = {}
         flow.udps.http2_settings_params = {}
-        
+
         # Try to detect HTTP/2 in first packet
         self._analyze_packet(packet, flow)
 
@@ -86,17 +86,21 @@ class HTTP2Fingerprint(NFPlugin):
         """Update HTTP/2 analysis with each packet"""
         if not flow.udps.http2_detected:
             self._analyze_packet(packet, flow)
-        elif len(flow.udps.http2_frame_types) < 20:  # Continue analyzing first 20 frames
+        elif (
+            len(flow.udps.http2_frame_types) < 20
+        ):  # Continue analyzing first 20 frames
             self._parse_http2_frames(packet, flow)
 
     def on_expire(self, flow):
         """Finalize HTTP/2 fingerprint on flow expiration"""
         if flow.udps.http2_detected and flow.udps.http2_settings_params:
             # Create a unique fingerprint based on SETTINGS parameters
-            settings_string = ",".join([
-                f"{self.SETTINGS_PARAMS.get(k, str(k))}={v}"
-                for k, v in sorted(flow.udps.http2_settings_params.items())
-            ])
+            settings_string = ",".join(
+                [
+                    f"{self.SETTINGS_PARAMS.get(k, str(k))}={v}"
+                    for k, v in sorted(flow.udps.http2_settings_params.items())
+                ]
+            )
             flow.udps.http2_settings_fingerprint = hashlib.md5(
                 settings_string.encode()
             ).hexdigest()[:16]
@@ -106,29 +110,31 @@ class HTTP2Fingerprint(NFPlugin):
         try:
             if packet.ip_version != 4 or packet.protocol != 6:  # Not IPv4 TCP
                 return
-            
+
             ip_packet = IP(packet.ip_packet)
-            if not hasattr(ip_packet, 'tcp'):
+            if not hasattr(ip_packet, "tcp"):
                 return
-            
+
             tcp_data = ip_packet.tcp.data
             if not tcp_data or len(tcp_data) < 24:
                 return
-            
+
             # Check for HTTP/2 connection preface
             if tcp_data.startswith(self.HTTP2_PREFACE):
                 flow.udps.http2_detected = True
                 flow.udps.http2_client_preface = True
                 # Parse frames after preface
-                self._parse_http2_frames_from_data(tcp_data[len(self.HTTP2_PREFACE):], flow)
+                self._parse_http2_frames_from_data(
+                    tcp_data[len(self.HTTP2_PREFACE) :], flow
+                )
             # Check for HTTP/2 frame structure (without preface, e.g., server response)
             elif self._is_http2_frame(tcp_data):
                 flow.udps.http2_detected = True
                 self._parse_http2_frames_from_data(tcp_data, flow)
             # Check for ALPN negotiation result (h2)
-            elif b'h2' in tcp_data[:100] or b'HTTP/2' in tcp_data[:100]:
+            elif b"h2" in tcp_data[:100] or b"HTTP/2" in tcp_data[:100]:
                 flow.udps.http2_detected = True
-                
+
         except Exception:
             pass  # Silently handle parsing errors
 
@@ -137,15 +143,15 @@ class HTTP2Fingerprint(NFPlugin):
         try:
             if packet.ip_version != 4 or packet.protocol != 6:
                 return
-            
+
             ip_packet = IP(packet.ip_packet)
-            if not hasattr(ip_packet, 'tcp'):
+            if not hasattr(ip_packet, "tcp"):
                 return
-            
+
             tcp_data = ip_packet.tcp.data
             if tcp_data:
                 self._parse_http2_frames_from_data(tcp_data, flow)
-                
+
         except Exception:
             pass
 
@@ -155,25 +161,29 @@ class HTTP2Fingerprint(NFPlugin):
         while offset + 9 <= len(data):  # Minimum frame header size
             try:
                 # Parse frame header (9 bytes)
-                length = int.from_bytes(data[offset:offset+3], 'big')
-                frame_type = data[offset+3]
-                flags = data[offset+4]
-                stream_id = int.from_bytes(data[offset+5:offset+9], 'big') & 0x7FFFFFFF
-                
-                frame_type_name = self.FRAME_TYPES.get(frame_type, f'UNKNOWN_{frame_type}')
-                
+                length = int.from_bytes(data[offset : offset + 3], "big")
+                frame_type = data[offset + 3]
+                flags = data[offset + 4]
+                stream_id = (
+                    int.from_bytes(data[offset + 5 : offset + 9], "big") & 0x7FFFFFFF
+                )
+
+                frame_type_name = self.FRAME_TYPES.get(
+                    frame_type, f"UNKNOWN_{frame_type}"
+                )
+
                 if frame_type_name not in flow.udps.http2_frame_types:
                     flow.udps.http2_frame_types.append(frame_type_name)
-                
+
                 # Parse frame payload
                 payload_start = offset + 9
                 payload_end = payload_start + length
-                
+
                 if payload_end > len(data):
                     break  # Incomplete frame
-                
+
                 payload = data[payload_start:payload_end]
-                
+
                 # Parse specific frame types
                 if frame_type == 0x04:  # SETTINGS
                     self._parse_settings_frame(payload, flags, flow)
@@ -181,9 +191,9 @@ class HTTP2Fingerprint(NFPlugin):
                     self._parse_window_update_frame(payload, flow)
                 elif frame_type == 0x02:  # PRIORITY
                     self._parse_priority_frame(payload, flow)
-                
+
                 offset = payload_end
-                
+
             except Exception:
                 break
 
@@ -191,12 +201,12 @@ class HTTP2Fingerprint(NFPlugin):
         """Parse SETTINGS frame"""
         if flags & 0x01:  # ACK flag set
             return
-        
+
         # SETTINGS frame: each parameter is 6 bytes (2 bytes ID + 4 bytes value)
         offset = 0
         while offset + 6 <= len(payload):
-            param_id = int.from_bytes(payload[offset:offset+2], 'big')
-            param_value = int.from_bytes(payload[offset+2:offset+6], 'big')
+            param_id = int.from_bytes(payload[offset : offset + 2], "big")
+            param_value = int.from_bytes(payload[offset + 2 : offset + 6], "big")
             flow.udps.http2_settings_params[param_id] = param_value
             flow.udps.http2_settings_count += 1
             offset += 6
@@ -204,7 +214,7 @@ class HTTP2Fingerprint(NFPlugin):
     def _parse_window_update_frame(self, payload, flow):
         """Parse WINDOW_UPDATE frame"""
         if len(payload) >= 4 and flow.udps.http2_window_update == 0:
-            increment = int.from_bytes(payload[0:4], 'big') & 0x7FFFFFFF
+            increment = int.from_bytes(payload[0:4], "big") & 0x7FFFFFFF
             flow.udps.http2_window_update = increment
 
     def _parse_priority_frame(self, payload, flow):
@@ -220,44 +230,44 @@ class HTTP2Fingerprint(NFPlugin):
         """Check if data looks like HTTP/2 frame"""
         if len(data) < 9:
             return False
-        
+
         # Check frame type is valid
         frame_type = data[3]
         if frame_type not in self.FRAME_TYPES:
             return False
-        
+
         # Check frame length is reasonable
-        length = int.from_bytes(data[0:3], 'big')
+        length = int.from_bytes(data[0:3], "big")
         if length > 16777215:  # Max frame size
             return False
-        
+
         return True
 
 
 class HTTP3Fingerprint(NFPlugin):
     """
     HTTP3Fingerprint Plugin: Extract HTTP/3 (QUIC) fingerprinting information
-    
+
     This plugin analyzes QUIC packets to identify HTTP/3 traffic and extract
     fingerprinting features. HTTP/3 uses QUIC protocol over UDP.
-    
+
     Attributes:
         flow.udps.http3_detected: Boolean indicating if HTTP/3 was detected
         flow.udps.quic_version: QUIC version detected
         flow.udps.quic_fingerprint: Fingerprint based on QUIC parameters
         flow.udps.http3_frame_types: List of HTTP/3 frame types seen
     """
-    
+
     # QUIC version signatures
     QUIC_VERSIONS = {
-        0x00000001: 'QUIC_v1',
-        0x51303530: 'Q050',
-        0x51303436: 'Q046',
-        0xff00001d: 'draft-29',
-        0xff00001c: 'draft-28',
-        0xff00001b: 'draft-27'
+        0x00000001: "QUIC_v1",
+        0x51303530: "Q050",
+        0x51303436: "Q046",
+        0xFF00001D: "draft-29",
+        0xFF00001C: "draft-28",
+        0xFF00001B: "draft-27",
     }
-    
+
     def on_init(self, packet, flow):
         """Initialize HTTP/3 tracking for new flow"""
         flow.udps.http3_detected = False
@@ -265,7 +275,7 @@ class HTTP3Fingerprint(NFPlugin):
         flow.udps.quic_fingerprint = ""
         flow.udps.http3_frame_types = []
         flow.udps.quic_long_header = False
-        
+
         self._analyze_packet(packet, flow)
 
     def on_update(self, packet, flow):
@@ -286,44 +296,46 @@ class HTTP3Fingerprint(NFPlugin):
         try:
             if packet.ip_version != 4 or packet.protocol != 17:  # Not IPv4 UDP
                 return
-            
+
             ip_packet = IP(packet.ip_packet)
-            if not hasattr(ip_packet, 'udp'):
+            if not hasattr(ip_packet, "udp"):
                 return
-            
+
             udp_data = ip_packet.udp.data
             if not udp_data or len(udp_data) < 8:
                 return
-            
+
             # Check common QUIC ports
-            if ip_packet.udp.dport not in [443, 80] and ip_packet.udp.sport not in [443, 80]:
+            if ip_packet.udp.dport not in [443, 80] and ip_packet.udp.sport not in [
+                443,
+                80,
+            ]:
                 return
-            
+
             # Check for QUIC long header (first bit = 1)
             first_byte = udp_data[0]
             if first_byte & 0x80:  # Long header
                 flow.udps.quic_long_header = True
-                
+
                 # Parse version (4 bytes after first byte)
                 if len(udp_data) >= 5:
-                    version = int.from_bytes(udp_data[1:5], 'big')
+                    version = int.from_bytes(udp_data[1:5], "big")
                     flow.udps.quic_version = self.QUIC_VERSIONS.get(
-                        version, 
-                        f'0x{version:08x}'
+                        version, f"0x{version:08x}"
                     )
-                    
+
                     # QUIC detected, likely HTTP/3
                     if version != 0:  # Not version negotiation
                         flow.udps.http3_detected = True
-            
+
             # Check for QUIC short header and ALPN indicators
-            elif b'h3' in udp_data[:100] or b'h3-' in udp_data[:100]:
+            elif b"h3" in udp_data[:100] or b"h3-" in udp_data[:100]:
                 flow.udps.http3_detected = True
                 flow.udps.quic_version = "h3"
-                
+
         except Exception:
             pass
 
 
 # Convenience export
-__all__ = ['HTTP2Fingerprint', 'HTTP3Fingerprint']
+__all__ = ["HTTP2Fingerprint", "HTTP3Fingerprint"]
