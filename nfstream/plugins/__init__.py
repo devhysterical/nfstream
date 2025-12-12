@@ -18,3 +18,4 @@ from .slicer import FlowSlicer
 from .dhcp import DHCP
 from .mdns import MDNS
 from .ja4 import JA4
+from .http2 import HTTP2Fingerprint, HTTP3Fingerprint
